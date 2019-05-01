@@ -1,67 +1,43 @@
-# Chrome Extension TypeScript Starter
+# Google Meet Autostart
 
-[![Build Status](https://travis-ci.org/chibat/chrome-extension-typescript-starter.svg?branch=master)](https://travis-ci.org/chibat/chrome-extension-typescript-starter)
+Will automatically join and close meet.hangout.com sessions.
 
-Chrome Extension, TypeScript and Visual Studio Code
+## For developers
 
-## Prerequisites
-
-* [node + npm](https://nodejs.org/) (Current Version)
-
-## Option
-
-* [Visual Studio Code](https://code.visualstudio.com/)
-
-## Includes the following
-
-* TypeScript
-* Webpack
-* Moment.js
-* jQuery
-* Example Code
-    * Chrome Storage
-    * Options Version 2
-    * content script
-    * count up badge number
-    * background
-
-## Project Structure
-
-* src: TypeScript source files
-* dist: Chrome Extension directory
-* dist/js: Generated JavaScript files
-
-## Setup
+### Setup
 
 ```
 npm install
 ```
 
-## Import as Visual Studio Code project
+### Import as Visual Studio Code project
 
 ...
 
-## Build
+### Build
 
 ```
 npm run build
 ```
 
-## Build in watch mode
+### Build in watch mode
 
-### terminal
+#### terminal
 
 ```
 npm run watch
 ```
 
-### Visual Studio Code
+#### Visual Studio Code
 
 Run watch mode.
 
 type `Ctrl + Shift + B`
 
-## Load extension to chrome
+### Load extension to chrome
 
 Load `dist` directory
 
+# Thanks
+
+Thanks to [![Build Status](https://travis-ci.org/chibat/chrome-extension-typescript-starter.svg?branch=master)](https://travis-ci.org/chibat/chrome-extension-typescript-starter) for providing the template for this extention
