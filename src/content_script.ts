@@ -127,11 +127,17 @@ function locateCloseMeeting(): number {
 
 function polling() {
   setTimeout(polling, 1000 * 8);
-  console.log("Scanning:");
-  if (locateMeeting() == 0) {
-    locateJoinMeeting();
-    locateCloseMeeting();
-  }
+  chrome.storage.local.get({ isEnabled: true }, function(items: { isEnabled }) {
+    if (items.isEnabled) {
+      console.log("Scanning:");
+      if (locateMeeting() == 0) {
+        locateJoinMeeting();
+        locateCloseMeeting();
+      }
+    } else {
+      console.log("Extention disabled.");
+    }
+  });
 }
 
 function store(key: string, value: any, action: CallbackFunction): any {
