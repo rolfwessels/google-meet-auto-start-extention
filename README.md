@@ -1,6 +1,6 @@
 # Google Meet Autostart
 
-Will automatically join and close meet.hangout.com sessions.
+Google chrome extension to automatically join and close google meet/hangout sessions.
 
 ## For developers
 

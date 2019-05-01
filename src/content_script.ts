@@ -1,5 +1,6 @@
 import * as $ from "jquery";
 const CURRENT_MEETING = "currentMeeting_1";
+const SELECT_COLOR = "#6200EE";
 type CallbackFunction = (value: any) => void;
 
 class Meeting {
@@ -79,6 +80,7 @@ function locateMeeting(): number {
         loadedMeeting = meeting;
         store(CURRENT_MEETING, meeting, stored => {
           console.log("Saved meeting " + stored.callId);
+          $(element).css("background-color", SELECT_COLOR);
           setTimeout(() => element.click(), 5000);
         });
       } else {
@@ -96,6 +98,7 @@ function locateJoinMeeting(): number {
       console.log("Found meeting", loadedMeeting);
       if (loadedMeeting.eventId) {
         console.log("Clicking join meeting.... wait 5 seconds");
+        $(element).css("background-color", SELECT_COLOR);
         setTimeout(() => element.click(), 5000);
       } else {
         console.log("Skip clicking.");
