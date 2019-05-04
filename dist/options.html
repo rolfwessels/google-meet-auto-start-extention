@@ -3,17 +3,41 @@
   <head>
     <title>My Test Extension Options</title>
     <script src="js/vendor.js"></script>
+    <style>
+      label {
+        min-width: 100px;
+        display: inline-block;
+        margin: 7px 0px;
+        font-weight: bold;
+      }
+      #status {
+        background-color: lightgreen;
+        margin: 5px 10px;
+        padding: 4px;
+      }
+      .inline {
+        display: inline-block;
+      }
+    </style>
   </head>
 
   <body>
-    <label>
-      <input type="checkbox" id="enabled" />
-      Enabled.
-    </label>
-
-    <div id="status"></div>
-    <button id="save">Save</button>
-
+    <div>
+      <div>
+        <label>Enabled</label>
+        <input style="margin-right: 10px;" type="checkbox" id="enabled" />
+      </div>
+      <div>
+        <label>Slack-bot token</label>
+        <input style="margin-right: 10px;" type="password" id="slackToken" />
+      </div>
+      <div>
+        <div class="inline">
+          <button style="margin-top: 10px;" id="save">Save</button>
+        </div>
+        <div class="inline" id="status">Options saved.</div>
+      </div>
+    </div>
     <script src="js/options.js"></script>
   </body>
 </html>
