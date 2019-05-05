@@ -1,4 +1,11 @@
 import * as $ from "jquery";
+import { TabActions } from "./tabActions";
+
+const JQ_START_NEW_MEETING = "div:contains('Start a new meeting'):parent";
+const JQ_MEETING_BUTTON = "[data-call-id]";
+const JQ_JOIN_MEETING = "[aria-label='Join meeting. ']";
+const JQ_START_MEETING = "[aria-label='Start meeting. ']";
+
 const CURRENT_MEETING = "currentMeeting_1";
 const SELECT_COLOR = "#6200EE";
 type CallbackFunction = (value: any) => void;
@@ -31,22 +38,30 @@ class Meeting {
   }
 }
 var loadedMeeting = new Meeting();
+var listner = new TabActions();
+listner.onOpenMeeting = (meeting, response) => {
+  console.log("Request to open meeting " + meeting);
+  response("Opening meeting " + meeting);
+  setTimeout(
+    () => (document.location.href = `https://meet.google.com/${meeting}`),
+    1000
+  );
+};
 
-chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
-  if (msg.color) {
-    console.log("Receive color = " + msg.color);
-    document.body.style.backgroundColor = msg.color;
-    sendResponse("Change color to " + msg.color);
+listner.onStartMeeting = response => {
+  var startButton = $(JQ_START_NEW_MEETING);
+  if (startButton) {
+    response("Starting session");
+    startButton.click();
   } else {
-    sendResponse("Color message is none.");
+    response("Hmmm.. call close to stop the current session");
   }
-  // If the received message has the expected format...
-  if (msg.text === "report_back") {
-    // Call the specified callback, passing
-    // the web-page's DOM content as argument
-    sendResponse(document.all[0].outerHTML);
-  }
-});
+};
+listner.onCloseMeeting = response => {
+  response("Closing meetings");
+  setTimeout(() => (document.location.href = "https://meet.google.com"), 1000);
+};
+listner.startListner();
 
 function isDone(endTime: Date) {
   var timeSpan = <any>endTime - <any>new Date();
@@ -59,7 +74,7 @@ function isDone(endTime: Date) {
 }
 
 function locateMeeting(): number {
-  var found = $("[data-call-id");
+  var found = $(JQ_MEETING_BUTTON);
   console.log("Found meetings: " + found.length);
   found.each((c, element) => {
     var meeting = new Meeting();
@@ -91,8 +106,27 @@ function locateMeeting(): number {
   return found.length;
 }
 
+function locateStartMeeting(): number {
+  var found = $(`${JQ_START_MEETING}`);
+
+  found.each((c, element) => {
+    get(CURRENT_MEETING, new Meeting(), loadedMeeting => {
+      console.log("Found meeting", loadedMeeting);
+      if (loadedMeeting.eventId) {
+        console.log("Clicking join meeting.... wait 5 seconds");
+        $(element).css("background-color", SELECT_COLOR);
+        setTimeout(() => element.click(), 5000);
+      } else {
+        console.log("Skip clicking.");
+      }
+    });
+  });
+  return found.length;
+}
+
 function locateJoinMeeting(): number {
-  var found = $("[aria-label='Join meeting. ']");
+  var found = $(JQ_JOIN_MEETING);
+
   found.each((c, element) => {
     get(CURRENT_MEETING, new Meeting(), loadedMeeting => {
       console.log("Found meeting", loadedMeeting);
@@ -134,6 +168,7 @@ function polling() {
     if (items.isEnabled) {
       if (locateMeeting() == 0) {
         locateJoinMeeting();
+        locateStartMeeting();
         locateCloseMeeting();
       }
     } else {
