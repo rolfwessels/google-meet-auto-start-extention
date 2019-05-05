@@ -28,4 +28,7 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
 
       # run tests!
-      - run: npm zip
+      - run: npm run zip
+
+      - store_artifacts:
+          path: ./google-meet-auto-start.v0.2.0.zip
