@@ -42,6 +42,8 @@ export class TabActions {
         console.log("Message received", msg);
         if (msg.action == "meeting-started") {
           this.onMeetingStarted(msg.meetingRoom);
+
+          sendResponse("done");
         }
       }
     });

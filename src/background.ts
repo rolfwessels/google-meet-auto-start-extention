@@ -9,9 +9,9 @@ async function main() {
   var session = new SlackSession(settings.token, settings.channel);
   tabActions.onMeetingStarted = room => {
     const text = `Meeting room ready: https://meet.google.com/${room}`;
-    if (overrideResponse) {
-      overrideResponse = null;
+    if (overrideResponse != null) {
       session.post(text, overrideResponse);
+      overrideResponse = null;
     } else {
       session.postToDefaultChannel(text);
     }
@@ -25,7 +25,10 @@ async function main() {
         tabActions.startMeeting(m);
       };
       parser.onOpen = room => tabActions.openMeeting(room, m);
-      parser.onClose = () => tabActions.closeMeetings(m);
+      parser.onClose = () => {
+        overrideResponse = null;
+        tabActions.closeMeetings(m);
+      };
       parser.parse(m.text, m);
     }
   });
