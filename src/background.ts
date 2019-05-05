@@ -55,7 +55,6 @@ async function connecToSlack(options: OptionSettings) {
   try {
     await session.connect();
     console.log("Connected to slack...");
-    session.postToDefaultChannel("Check format");
   } catch (e) {
     console.error(e);
   }

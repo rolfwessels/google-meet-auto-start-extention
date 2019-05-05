@@ -1,12 +1,12 @@
 {
   "name": "google-meet-auto-start-extention",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "google-meet-auto-start-extention",
   "main": "index.js",
   "scripts": {
     "watch": "webpack --config webpack/webpack.dev.js --watch",
     "build": "webpack --config webpack/webpack.prod.js",
-    "zip": "npm run build && cd dist/ && bestzip ../google-meet-auto-start.v0.2.0.zip *"
+    "zip": "npm run build && cd dist/ && bestzip ../google-meet-auto-start.v0.2.1.zip *"
   },
   "author": "",
   "license": "MIT",

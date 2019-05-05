@@ -31,4 +31,4 @@ jobs:
       - run: npm run zip
 
       - store_artifacts:
-          path: ./google-meet-auto-start.v0.2.0.zip
+          path: ./google-meet-auto-start.*.zip
