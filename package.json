@@ -1,25 +1,28 @@
 {
-  "name": "chrome-extension-typescript-starter",
-  "version": "1.0.0",
-  "description": "chrome-extension-typescript-starter",
+  "name": "google-meet-auto-start-extention",
+  "version": "0.2.0",
+  "description": "google-meet-auto-start-extention",
   "main": "index.js",
   "scripts": {
     "watch": "webpack --config webpack/webpack.dev.js --watch",
-    "build": "webpack --config webpack/webpack.prod.js"
+    "build": "webpack --config webpack/webpack.prod.js",
+    "zip": "npm run build && cd dist/ && bestzip ../google-meet-auto-start.v0.2.0.zip *"
   },
   "author": "",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chibat/chrome-extension-typescript-starter.git"
+    "url": "https://github.com/crolfwessels/google-meet-auto-start-extention.git"
   },
   "dependencies": {
     "jquery": "~3.4.0",
-    "moment": "~2.24.0"
+    "slack": "^11.0.2"
   },
   "devDependencies": {
+    "@types/node": "^12.0.0",
     "@types/chrome": "~0.0.83",
     "@types/jquery": "~3.3.29",
+    "bestzip": "^2.1.2",
     "ts-loader": "~5.4.3",
     "typescript": "~3.4.5",
     "webpack": "~4.17.2",
