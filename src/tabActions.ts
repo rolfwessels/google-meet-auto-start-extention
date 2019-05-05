@@ -1,4 +1,5 @@
 import { IWithResponse } from "./slackSession";
+import { OptionSettings } from "./options";
 
 export class TabActions {
   startMeeting(response: IWithResponse): void {
@@ -20,6 +21,19 @@ export class TabActions {
     );
   }
 
+  optionsChanged(before: OptionSettings, after: OptionSettings): any {
+    if (
+      before.slackChannel != after.slackChannel ||
+      before.slackToken != after.slackToken
+    ) {
+      chrome.runtime.sendMessage({ action: "settings-updated" }, function(
+        response
+      ) {
+        console.log("response from background: ", response);
+      });
+    }
+  }
+
   // listners
 
   onCloseMeeting(sendResponse: (response?: any) => void): any {
@@ -35,6 +49,10 @@ export class TabActions {
     console.log(`Started meeting room: ${meetingRoom}`);
   }
 
+  onSettingsUpdated(msg: any): any {
+    console.log(`Settings updated`, msg);
+  }
+
   // subscribe
   listenToContentScript(): any {
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -42,6 +60,11 @@ export class TabActions {
         console.log("Message received", msg);
         if (msg.action == "meeting-started") {
           this.onMeetingStarted(msg.meetingRoom);
+
+          sendResponse("done");
+        }
+        if (msg.action == "settings-updated") {
+          this.onSettingsUpdated(msg);
 
           sendResponse("done");
         }

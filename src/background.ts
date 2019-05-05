@@ -1,12 +1,33 @@
-import { readSlackToken, SlackSession, IWithResponse } from "./slackSession";
+import { SlackSession } from "./slackSession";
 import { TabActions } from "./tabActions";
 import { MessageParse } from "./messageParse";
+import { OptionSettings } from "./options";
+import { Settings } from "./settings";
+
 let tabActions = new TabActions();
 let overrideResponse = null;
+var settings = new Settings<OptionSettings>();
+var _session: SlackSession = null;
 
 async function main() {
-  var settings = await readSlackToken();
-  var session = new SlackSession(settings.token, settings.channel);
+  var options = await settings.get(new OptionSettings());
+  if (_session) {
+    console.log("Connected to slack...");
+    _session.close();
+    _session = null;
+  }
+  if (options.slackToken) {
+    _session = await connecToSlack(options);
+  } else {
+    console.error("Add slack token to settings to connect to slack.");
+  }
+}
+
+async function connecToSlack(options: OptionSettings) {
+  var session = new SlackSession(
+    atob(options.slackToken),
+    options.slackChannel
+  );
   tabActions.onMeetingStarted = room => {
     const text = `Meeting room ready: https://meet.google.com/${room}`;
     if (overrideResponse != null) {
@@ -16,7 +37,6 @@ async function main() {
       session.postToDefaultChannel(text);
     }
   };
-
   session.onMessage(m => {
     if (m.isSpeakingToMe || m.isOnMyChannel) {
       let parser = new MessageParse();
@@ -39,8 +59,9 @@ async function main() {
   } catch (e) {
     console.error(e);
   }
+  return session;
 }
 
+tabActions.onSettingsUpdated = () => main();
 tabActions.listenToContentScript();
-
 main();

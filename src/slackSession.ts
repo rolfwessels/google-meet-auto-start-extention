@@ -13,6 +13,7 @@ export class SlackSession {
     this._defaultToken = { token: token };
     this._channel = channel;
   }
+
   async connect(): Promise<Boolean> {
     var connection = await slack.rtm.connect(this._defaultToken);
     console.log("connection", connection);
@@ -29,6 +30,13 @@ export class SlackSession {
     };
 
     return connection.ok;
+  }
+
+  close(): any {
+    if (this._webSocket) {
+      this._webSocket.close();
+      this._webSocket = null;
+    }
   }
 
   onMessage(text: messageCallBack) {
@@ -52,24 +60,23 @@ export class SlackSession {
   private async ensureHasChannel(): Promise<string> {
     if (this._channelId == null) {
       this._channelId = await this.lookupChannel(this._channel);
-      if (this._channelId == null)
-        this._channelId = await this.lookupChannel("general");
     }
-    console.log(
-      "this._channelId",
-      JSON.stringify(this._channelId || this._channel)
-    );
     return this._channelId || this._channel;
   }
 
   async post(text: string, channel: string): Promise<Boolean> {
-    let result = await slack.chat.postMessage({
-      ...this._defaultToken,
-      text: text,
-      channel: channel,
-      as_user: true
-    });
-    return result.ok;
+    try {
+      let result = await slack.chat.postMessage({
+        ...this._defaultToken,
+        text: text,
+        channel: channel,
+        as_user: true
+      });
+      return result.ok;
+    } catch (e) {
+      console.error(e, { text: text, channel: channel });
+      throw e;
+    }
   }
 }
 
@@ -105,29 +112,6 @@ class IncommingMessage implements IWithResponse {
   }
 }
 
-export function readSlackToken(): Promise<{ token: string; channel: string }> {
-  var readSlackToken = new Promise<{ token: string; channel: string }>(function(
-    resolve,
-    reject
-  ) {
-    chrome.storage.local.get(
-      {
-        slackToken: "",
-        slackChannel: "meetingroom"
-      },
-      function(items: { slackToken: string; slackChannel: string }) {
-        if (items.slackToken == null || items.slackToken.length < 10) {
-          reject("Please add slack token to use slack bot integration.");
-        }
-        resolve({
-          token: atob(items.slackToken),
-          channel: items.slackChannel
-        });
-      }
-    );
-  });
-  return readSlackToken;
-}
 // Get the slack token
 
 interface slackMessage {

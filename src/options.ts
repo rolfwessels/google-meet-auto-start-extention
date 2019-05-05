@@ -1,4 +1,6 @@
 import * as $ from "jquery";
+import { Settings } from "./settings";
+import { TabActions } from "./tabActions";
 
 export class OptionSettings {
   isEnabled: boolean;
@@ -10,30 +12,44 @@ export class OptionSettings {
     this.slackChannel = "meetingroom";
   }
 }
+var settings = new Settings<OptionSettings>();
 
 function save_options() {
-  const saveSetting = new OptionSettings();
-  saveSetting.isEnabled = $("#enabled").prop("checked");
-  saveSetting.slackToken = btoa($("#slackToken").val() as string);
-  saveSetting.slackChannel = $("#slackChannel").val() as string;
-
-  chrome.storage.local.set(saveSetting, function() {
-    // Update status to let user know options were saved.
-    var status = $("#status");
-    status.show();
-    status.text("Options saved.");
-    setTimeout(function() {
-      status.text("");
-      status.hide("slow");
-    }, 1500);
+  settings.get(new OptionSettings()).then(before => {
+    const saveSetting = new OptionSettings();
+    saveSetting.isEnabled = $("#enabled").prop("checked");
+    const token = $("#slackToken").val() as string;
+    saveSetting.slackToken = btoa(token);
+    saveSetting.slackChannel = $("#slackChannel").val() as string;
+    if (token != "" && token != null && !token.startsWith("xoxb-")) {
+      showStatus(
+        "Slack token should start with `xoxb-`.",
+        4000,
+        "#statusFailed"
+      );
+    } else {
+      settings.store(saveSetting).then(function() {
+        showStatus("Stored.", 1500);
+        var actions = new TabActions();
+        actions.optionsChanged(before, saveSetting);
+      });
+    }
   });
 }
 
+function showStatus(text: string, timeout: number, id: string = "#status") {
+  var status = $(id);
+  status.show();
+  status.text(text);
+  setTimeout(function() {
+    status.text("");
+    status.hide("slow");
+  }, timeout);
+}
+
 function restore_options() {
-  chrome.storage.local.get(new OptionSettings(), function(
-    items: OptionSettings
-  ) {
-    console.log("Loaded");
+  settings.get(new OptionSettings()).then(items => {
+    console.log("Options loaded");
     $("#enabled").prop("checked", items.isEnabled);
     $("#slackChannel").val(items.slackChannel);
     $("#slackToken").val(atob(items.slackToken));
@@ -42,4 +58,5 @@ function restore_options() {
 
 $("#save").click(save_options);
 $("#status").hide();
+$("#statusFailed").hide();
 $(restore_options); // document.addEventListener('DOMContentLoaded', restore_options);

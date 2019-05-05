@@ -1,7 +1,8 @@
 import * as $ from "jquery";
 import { TabActions } from "./tabActions";
-import { addMinutes, toUnixTime, Settings } from "./utils";
+import { addMinutes, toUnixTime } from "./utils";
 import { OptionSettings } from "./options";
+import { Settings } from "./settings";
 
 const JQ_START_NEW_MEETING = "div:contains('Start a new meeting'):parent";
 const JQ_MEETING_BUTTON = "[data-call-id]";
