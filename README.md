@@ -1,5 +1,7 @@
 # Google Meet Autostart
 
+[![CircleCI](https://circleci.com/gh/rolfwessels/google-meet-auto-start-extention.svg?style=svg)](https://circleci.com/gh/rolfwessels/google-meet-auto-start-extention)
+
 Google chrome extension to automatically join and close google meet/hangout sessions.
 
 ## For developers
