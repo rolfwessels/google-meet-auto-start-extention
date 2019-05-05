@@ -11,6 +11,15 @@ export class TabActions {
     this.sendMessage({ action: "close-meeting" }, response);
   }
 
+  sendMeetingStarted(meetingRoom: string) {
+    chrome.runtime.sendMessage(
+      { action: "meeting-started", meetingRoom },
+      function(response) {
+        console.log("response from background: ", response);
+      }
+    );
+  }
+
   // listners
 
   onCloseMeeting(sendResponse: (response?: any) => void): any {
@@ -22,10 +31,23 @@ export class TabActions {
   onOpenMeeting(meetingRoom: any, sendResponse: (response?: any) => void): any {
     throw new Error("Method not implemented.");
   }
+  onMeetingStarted(meetingRoom: any): any {
+    console.log(`Started meeting room: ${meetingRoom}`);
+  }
 
-  // !listners
+  // subscribe
+  listenToContentScript(): any {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (msg.action != null) {
+        console.log("Message received", msg);
+        if (msg.action == "meeting-started") {
+          this.onMeetingStarted(msg.meetingRoom);
+        }
+      }
+    });
+  }
 
-  startListner(): any {
+  listenToBackground(): any {
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (msg.action != null) {
         console.log("Message received", msg);
@@ -42,7 +64,7 @@ export class TabActions {
     });
   }
 
-  sendMessage(message: any, response: IWithResponse): any {
+  private sendMessage(message: any, response: IWithResponse): any {
     console.log("Sending message", message);
     chrome.tabs.query({ url: "*://meet.google.com/*" }, tabs => {
       if (tabs != null && tabs.length > 0) {

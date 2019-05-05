@@ -4,8 +4,12 @@ export class SlackSession {
   _defaultToken: { token: string };
   _webSocket: WebSocket;
   _messageCallBack: messageCallBack;
-  constructor(token: string) {
+  _channel: string;
+  _channelId: string;
+
+  constructor(token: string, channel: string) {
     this._defaultToken = { token: token };
+    this._channel = channel;
   }
   async connect(): Promise<Boolean> {
     var connection = await slack.rtm.connect(this._defaultToken);
@@ -18,10 +22,32 @@ export class SlackSession {
         this._messageCallBack(new IncommingMessage(msg, this));
       }
     };
+
     return connection.ok;
   }
+
   onMessage(text: messageCallBack) {
     this._messageCallBack = text;
+  }
+
+  async lookupChannel(channelName: string): Promise<string> {
+    if (this._channelId == null) {
+      var channels = await slack.channels.list(this._defaultToken);
+      var filtered = channels.channels.filter(x => x.name == channelName)[0];
+      if (filtered[0]) {
+        return filtered[0].id;
+      }
+    }
+    return null;
+  }
+
+  async postToDefaultChannel(text: string): Promise<Boolean> {
+    if (this._channelId == null) {
+      this._channelId = await this.lookupChannel(this._channel);
+      if (this._channelId == null)
+        this._channelId = await this.lookupChannel("general");
+    }
+    return await this.post(text, this._channelId || this._channel);
   }
 
   async post(text: string, channel: string): Promise<Boolean> {
@@ -52,24 +78,30 @@ class IncommingMessage implements IWithResponse {
     this.isBot = slackMessage.bot_id != null && slackMessage.subtype != null;
     this._session = session;
   }
-
   async reply(text: string): Promise<Boolean> {
     let result = await this._session.post(text, this.channel);
     return result;
   }
 }
 
-export function readSlackToken(): Promise<string> {
-  var readSlackToken = new Promise<string>(function(resolve, reject) {
+export function readSlackToken(): Promise<{ token: string; channel: string }> {
+  var readSlackToken = new Promise<{ token: string; channel: string }>(function(
+    resolve,
+    reject
+  ) {
     chrome.storage.local.get(
       {
-        slackToken: ""
+        slackToken: "",
+        slackChannel: "meetingroom"
       },
-      function(items: { slackToken: string }) {
+      function(items: { slackToken: string; slackChannel: string }) {
         if (items.slackToken == null || items.slackToken.length < 10) {
           reject("Please add slack token to use slack bot integration.");
         }
-        resolve(atob(items.slackToken));
+        resolve({
+          token: atob(items.slackToken),
+          channel: items.slackChannel
+        });
       }
     );
   });

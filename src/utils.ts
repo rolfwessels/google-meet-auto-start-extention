@@ -5,3 +5,12 @@ export function getMeetingId(text: string): string {
   }
   return null;
 }
+
+export function addMinutes(minutes: number, date: Date = null) {
+  return new Date((date || new Date()).getTime() + minutes * 60000);
+}
+
+export function toUnixTime(date: Date = null): number {
+  if (date == null) return Date.now();
+  return date.getTime();
+}

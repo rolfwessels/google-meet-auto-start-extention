@@ -3,11 +3,13 @@ import * as $ from "jquery";
 function save_options() {
   var isEnabled = $("#enabled").prop("checked");
   var slackToken = btoa($("#slackToken").val() as string);
+  var slackChannel = $("#slackChannel").val() as string;
 
   chrome.storage.local.set(
     {
       isEnabled: isEnabled,
-      slackToken: slackToken
+      slackToken: slackToken,
+      slackChannel: slackChannel
     },
     function() {
       // Update status to let user know options were saved.
@@ -26,11 +28,13 @@ function restore_options() {
   chrome.storage.local.get(
     {
       isEnabled: true,
-      slackToken: ""
+      slackToken: "",
+      slackChannel: "meetingroom"
     },
-    function(items: { isEnabled; slackToken }) {
+    function(items: { isEnabled; slackToken; slackChannel }) {
       console.log("Loaded");
       $("#enabled").prop("checked", items.isEnabled);
+      $("#slackChannel").val(items.slackChannel);
       $("#slackToken").val(atob(items.slackToken));
     }
   );

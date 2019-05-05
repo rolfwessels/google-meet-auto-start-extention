@@ -1,53 +1,29 @@
 import { readSlackToken, SlackSession, IWithResponse } from "./slackSession";
 import { TabActions } from "./tabActions";
-import { getMeetingId } from "./utils";
+import { MessageParse } from "./messageParse";
 let tabActions = new TabActions();
-
-class MessageParse {
-  onStart: () => void;
-  onOpen: (room: string) => void;
-  onClose: () => void;
-  parse(text: string, response: IWithResponse): any {
-    if (this.checkAction(text, "start", this.onStart)) {
-      this.onStart();
-    } else if (this.checkAction(text, "open", this.onOpen)) {
-      const meetingId = getMeetingId(text);
-      if (meetingId) {
-        this.onOpen(meetingId);
-      } else {
-        response.reply("Please add the meeting room eg `open  xxx-xxxx-xxx`.");
-      }
-    } else if (this.checkAction(text, "close", this.onClose)) {
-      this.onClose();
-    } else {
-      response.reply(
-        "Sorry I can't undestand that command. Options are `start`, `open xxx-xxxx-xxx` , `close`."
-      );
-    }
-  }
-  constructor() {}
-
-  private checkAction(text: string, action: string, actionCall: any): boolean {
-    const isAction = text
-      .toLowerCase()
-      .trim()
-      .startsWith(action);
-    if (actionCall == null) {
-      if (isAction) console.warn(`Please add action for '${action}'.`);
-      return false;
-    }
-
-    return isAction;
-  }
-}
+let overrideResponse = null;
 
 async function main() {
-  var slackToken = await readSlackToken();
-  var session = new SlackSession(slackToken);
+  var settings = await readSlackToken();
+  var session = new SlackSession(settings.token, settings.channel);
+  tabActions.onMeetingStarted = room => {
+    const text = `Meeting room ready: https://meet.google.com/${room}`;
+    if (overrideResponse) {
+      overrideResponse = null;
+      session.post(text, overrideResponse);
+    } else {
+      session.postToDefaultChannel(text);
+    }
+  };
+
   session.onMessage(m => {
     if (!m.isBot) {
       let parser = new MessageParse();
-      parser.onStart = () => tabActions.startMeeting(m);
+      parser.onStart = () => {
+        overrideResponse = m.channel;
+        tabActions.startMeeting(m);
+      };
       parser.onOpen = room => tabActions.openMeeting(room, m);
       parser.onClose = () => tabActions.closeMeetings(m);
       parser.parse(m.text, m);
@@ -64,5 +40,7 @@ async function main() {
     console.error(e);
   }
 }
+
+tabActions.listenToContentScript();
 
 main();

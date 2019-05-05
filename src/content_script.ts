@@ -1,14 +1,15 @@
 import * as $ from "jquery";
 import { TabActions } from "./tabActions";
+import { addMinutes, toUnixTime } from "./utils";
 
 const JQ_START_NEW_MEETING = "div:contains('Start a new meeting'):parent";
 const JQ_MEETING_BUTTON = "[data-call-id]";
 const JQ_JOIN_MEETING = "[aria-label='Join meeting. ']";
+const JQ_CLOSE_INVITE = "[aria-label='Close']";
 const JQ_START_MEETING = "[aria-label='Start meeting. ']";
-
-const CURRENT_MEETING = "currentMeeting_1";
+const JQ_LEAVE_CALL = "[aria-label='Leave call']";
+const DEFAULT_CLICK_TIMEOUT = 2000;
 const SELECT_COLOR = "#6200EE";
-type CallbackFunction = (value: any) => void;
 
 class Meeting {
   constructor() {
@@ -37,34 +38,44 @@ class Meeting {
     );
   }
 }
-var loadedMeeting = new Meeting();
-var listner = new TabActions();
+let loadedMeeting = new Meeting();
+let listner = new TabActions();
 listner.onOpenMeeting = (meeting, response) => {
   console.log("Request to open meeting " + meeting);
   response("Opening meeting " + meeting);
-  setTimeout(
-    () => (document.location.href = `https://meet.google.com/${meeting}`),
-    1000
-  );
+  var newMeeting = buildMeeting(meeting);
+  store(newMeeting).then(() => {
+    setTimeout(
+      () => (document.location.href = `https://meet.google.com/${meeting}`),
+      DEFAULT_CLICK_TIMEOUT
+    );
+  });
 };
 
 listner.onStartMeeting = response => {
-  var startButton = $(JQ_START_NEW_MEETING);
-  if (startButton) {
+  let startButton = $(JQ_START_NEW_MEETING);
+  if (startButton.length > 0) {
     response("Starting session");
     startButton.click();
   } else {
-    response("Hmmm.. call close to stop the current session");
+    response("Hmmm.. call `close` to stop the current session");
   }
 };
+
 listner.onCloseMeeting = response => {
   response("Closing meetings");
-  setTimeout(() => (document.location.href = "https://meet.google.com"), 1000);
+  store(new Meeting()).then(() => {
+    setTimeout(
+      () => (document.location.href = "https://meet.google.com"),
+      DEFAULT_CLICK_TIMEOUT
+    );
+  });
 };
-listner.startListner();
+
+listner.listenToBackground();
 
 function isDone(endTime: Date) {
-  var timeSpan = <any>endTime - <any>new Date();
+  let timeSpan = <any>endTime - <any>new Date();
   const isDone = endTime < new Date();
   console.log(
     "Time till the meeting closes:",
@@ -74,10 +85,10 @@ function isDone(endTime: Date) {
 }
 
 function locateMeeting(): number {
-  var found = $(JQ_MEETING_BUTTON);
+  let found = $(JQ_MEETING_BUTTON);
   console.log("Found meetings: " + found.length);
   found.each((c, element) => {
-    var meeting = new Meeting();
+    let meeting = new Meeting();
 
     meeting.beginTime = parseInt(
       element.attributes.getNamedItem("data-begin-time").value
@@ -90,13 +101,12 @@ function locateMeeting(): number {
     meeting.isNow = element.attributes.getNamedItem("data-is-now") !== null;
 
     if (meeting.isNow) {
-      if (loadedMeeting.eventId != meeting.eventId) {
+      if (loadedMeeting.callId != meeting.callId) {
         console.log("Connecting to meeting " + meeting.callId);
-        loadedMeeting = meeting;
-        store(CURRENT_MEETING, meeting, stored => {
+        store(meeting).then(stored => {
           console.log("Saved meeting " + stored.callId);
           $(element).css("background-color", SELECT_COLOR);
-          setTimeout(() => element.click(), 5000);
+          setTimeout(() => element.click(), DEFAULT_CLICK_TIMEOUT);
         });
       } else {
         console.log("Already loading");
@@ -107,33 +117,43 @@ function locateMeeting(): number {
 }
 
 function locateStartMeeting(): number {
-  var found = $(`${JQ_START_MEETING}`);
+  let found = $(`${JQ_START_MEETING}`);
 
   found.each((c, element) => {
-    get(CURRENT_MEETING, new Meeting(), loadedMeeting => {
-      console.log("Found meeting", loadedMeeting);
-      if (loadedMeeting.eventId) {
-        console.log("Clicking join meeting.... wait 5 seconds");
-        $(element).css("background-color", SELECT_COLOR);
-        setTimeout(() => element.click(), 5000);
-      } else {
-        console.log("Skip clicking.");
-      }
+    const callId = $("[data-meeting-code]")[0].attributes.getNamedItem(
+      "data-meeting-code"
+    ).value;
+    var newMeeting = buildMeeting(callId);
+    listner.sendMeetingStarted(callId);
+
+    store(newMeeting).then(() => {
+      $(element).css("background-color", SELECT_COLOR);
+      setTimeout(() => element.click(), DEFAULT_CLICK_TIMEOUT);
     });
   });
   return found.length;
+}
+
+function buildMeeting(callId: string, minutes: number = 30) {
+  var meeting = new Meeting();
+  meeting.beginTime = toUnixTime(addMinutes(-1));
+  meeting.endTime = toUnixTime(addMinutes(minutes));
+  meeting.isNow = true;
+  meeting.callId = callId;
+  return meeting;
 }
 
 function locateJoinMeeting(): number {
-  var found = $(JQ_JOIN_MEETING);
+  let found = $(JQ_JOIN_MEETING);
 
   found.each((c, element) => {
-    get(CURRENT_MEETING, new Meeting(), loadedMeeting => {
+    getMeeting().then(loadedMeeting => {
       console.log("Found meeting", loadedMeeting);
-      if (loadedMeeting.eventId) {
+      if (loadedMeeting.callId) {
+        listner.sendMeetingStarted(loadedMeeting.callId);
         console.log("Clicking join meeting.... wait 5 seconds");
         $(element).css("background-color", SELECT_COLOR);
-        setTimeout(() => element.click(), 5000);
+        setTimeout(() => element.click(), DEFAULT_CLICK_TIMEOUT);
       } else {
         console.log("Skip clicking.");
       }
@@ -141,19 +161,26 @@ function locateJoinMeeting(): number {
   });
   return found.length;
 }
+function locateCloseAddOther() {
+  let found = $(JQ_CLOSE_INVITE);
+  if (found) {
+    found.css("background-color", SELECT_COLOR);
+    setTimeout(() => found.click(), DEFAULT_CLICK_TIMEOUT);
+  }
+}
 
 function locateCloseMeeting(): number {
-  var found = $("[aria-label='Leave call']");
+  let found = $(JQ_LEAVE_CALL);
   found.each((c, element) => {
-    get(CURRENT_MEETING, new Meeting(), (loadedMeeting: Meeting) => {
-      console.log("You are in meeting", loadedMeeting);
+    getMeeting().then(loadedMeeting => {
+      console.log("You are in meeting", loadedMeeting.callId);
       if (isDone(new Date(loadedMeeting.endTime))) {
-        store(CURRENT_MEETING, new Meeting(), () => {
+        store(new Meeting()).then(c => {
           console.log("Clicked disconnect");
           setTimeout(() => element.click(), 1000);
           setTimeout(
             () => (document.location.href = "https://meet.google.com"),
-            5000
+            DEFAULT_CLICK_TIMEOUT
           );
         });
       }
@@ -163,13 +190,14 @@ function locateCloseMeeting(): number {
 }
 
 function polling() {
-  setTimeout(polling, 1000 * 8);
+  setTimeout(polling, 1000 * 5);
   chrome.storage.local.get({ isEnabled: true }, function(items: { isEnabled }) {
     if (items.isEnabled) {
       if (locateMeeting() == 0) {
         locateJoinMeeting();
         locateStartMeeting();
         locateCloseMeeting();
+        locateCloseAddOther();
       }
     } else {
       console.log("Extention disabled.");
@@ -177,17 +205,28 @@ function polling() {
   });
 }
 
-function store(key: string, value: any, action: CallbackFunction): any {
-  var set = {};
-  set[key] = value;
-  chrome.storage.local.set(set, function() {
-    action(value);
+function store(value: Meeting): Promise<Meeting> {
+  let promise = new Promise<Meeting>(function(resolve, reject) {
+    chrome.storage.local.set({ currentMeeting: value }, function() {
+      resolve(value);
+    });
   });
+
+  return promise;
 }
 
-function get(key: string, defaultValue: any, action: CallbackFunction) {
-  chrome.storage.local.get([key], function(data) {
-    action(data[key] || defaultValue);
+export function getMeeting(): Promise<Meeting> {
+  let promise = new Promise<Meeting>(function(resolve, reject) {
+    chrome.storage.local.get(
+      {
+        currentMeeting: new Meeting()
+      },
+      function(items: { currentMeeting: Meeting }) {
+        resolve(items.currentMeeting);
+      }
+    );
   });
+  return promise;
 }
+
 polling();
