@@ -74,7 +74,16 @@ export class TabActions {
         if (!selectedTab.active)
           response.reply("Note: that the current meet tab is not active.");
         chrome.tabs.sendMessage(selectedTab.id, message, callBackMessage => {
-          response.reply(callBackMessage);
+          if (chrome.runtime.lastError != null) {
+            console.error(
+              "No response from tab. Reloading",
+              chrome.runtime.lastError
+            );
+            chrome.tabs.reload(selectedTab.id);
+            response.reply(":angry: Error contacting tab. Please try again.");
+          } else {
+            response.reply(callBackMessage);
+          }
         });
       } else {
         response.reply("Please ensure meeting tab is open.");

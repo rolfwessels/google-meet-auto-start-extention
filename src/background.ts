@@ -18,7 +18,7 @@ async function main() {
   };
 
   session.onMessage(m => {
-    if (!m.isBot) {
+    if (m.isSpeakingToMe || m.isOnMyChannel) {
       let parser = new MessageParse();
       parser.onStart = () => {
         overrideResponse = m.channel;
@@ -29,16 +29,13 @@ async function main() {
         overrideResponse = null;
         tabActions.closeMeetings(m);
       };
-      parser.parse(m.text, m);
+      parser.parse(m.text, m, !m.isSpeakingToMe && m.isOnMyChannel);
     }
   });
   try {
-    chrome.tabs.query({ url: "*://meet.google.com/*" }, function(tabs) {
-      console.log("tabs", tabs);
-    });
-
     await session.connect();
     console.log("Connected to slack...");
+    session.postToDefaultChannel("Check format");
   } catch (e) {
     console.error(e);
   }

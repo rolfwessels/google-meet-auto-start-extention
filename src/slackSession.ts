@@ -1,4 +1,5 @@
 import * as slack from "slack";
+import { isContext } from "vm";
 
 export class SlackSession {
   _defaultToken: { token: string };
@@ -6,6 +7,7 @@ export class SlackSession {
   _messageCallBack: messageCallBack;
   _channel: string;
   _channelId: string;
+  _self: { name: string; id: string };
 
   constructor(token: string, channel: string) {
     this._defaultToken = { token: token };
@@ -13,6 +15,9 @@ export class SlackSession {
   }
   async connect(): Promise<Boolean> {
     var connection = await slack.rtm.connect(this._defaultToken);
+    console.log("connection", connection);
+    this.ensureHasChannel();
+    this._self = (<any>connection).self as { name: string; id: string };
     this._webSocket = new WebSocket(connection.url);
     this._webSocket.onmessage = event => {
       var msg = JSON.parse(event.data) as slackMessage;
@@ -31,30 +36,38 @@ export class SlackSession {
   }
 
   async lookupChannel(channelName: string): Promise<string> {
-    if (this._channelId == null) {
-      var channels = await slack.channels.list(this._defaultToken);
-      var filtered = channels.channels.filter(x => x.name == channelName)[0];
-      if (filtered[0]) {
-        return filtered[0].id;
-      }
+    var channels = await slack.channels.list(this._defaultToken);
+    var filtered = channels.channels.filter(x => x.name == channelName)[0];
+    if (filtered) {
+      return filtered.id;
     }
     return null;
   }
 
   async postToDefaultChannel(text: string): Promise<Boolean> {
+    await this.ensureHasChannel();
+    return await this.post(text, this._channelId || this._channel);
+  }
+
+  private async ensureHasChannel(): Promise<string> {
     if (this._channelId == null) {
       this._channelId = await this.lookupChannel(this._channel);
       if (this._channelId == null)
         this._channelId = await this.lookupChannel("general");
     }
-    return await this.post(text, this._channelId || this._channel);
+    console.log(
+      "this._channelId",
+      JSON.stringify(this._channelId || this._channel)
+    );
+    return this._channelId || this._channel;
   }
 
   async post(text: string, channel: string): Promise<Boolean> {
     let result = await slack.chat.postMessage({
       ...this._defaultToken,
       text: text,
-      channel: channel
+      channel: channel,
+      as_user: true
     });
     return result.ok;
   }
@@ -71,11 +84,19 @@ class IncommingMessage implements IWithResponse {
   _session: SlackSession;
   text: string;
   isBot: Boolean;
+  isOnMyChannel: boolean;
   channel: string;
+  isSpeakingToMe: boolean;
   constructor(slackMessage: slackMessage, session: SlackSession) {
     this.text = slackMessage.text;
     this.channel = slackMessage.channel;
-    this.isBot = slackMessage.bot_id != null && slackMessage.subtype != null;
+    let isBot = slackMessage.bot_id != null || slackMessage.subtype != null;
+    this.isBot = isBot;
+    this.isSpeakingToMe =
+      !isBot &&
+      (slackMessage.channel.startsWith("D") ||
+        this.text.indexOf(`<@${session._self.id}>`) != -1);
+    this.isOnMyChannel = !isBot && session._channelId == this.channel;
     this._session = session;
   }
   async reply(text: string): Promise<Boolean> {
