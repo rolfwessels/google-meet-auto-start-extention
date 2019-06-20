@@ -4,11 +4,14 @@ import { addMinutes, toUnixTime } from "./utils";
 import { OptionSettings } from "./options";
 import { Settings } from "./settings";
 
-const JQ_START_NEW_MEETING = "div:contains('Start a new meeting'):parent";
+const JQ_START_NEW_MEETING = "div:contains('Join or start a meeting'):parent";
 const JQ_MEETING_BUTTON = "[data-call-id]";
 const JQ_JOIN_MEETING = "[aria-label='Join meeting. ']";
+const JQ_CONTINUE_INVITE = "div:contains('Continue'):parent";
 const JQ_CLOSE_INVITE = "[aria-label='Close']";
 const JQ_START_MEETING = "[aria-label='Start meeting. ']";
+const JQ_ENTER_NAME = "[aria-label='Your name']";
+const JQ_ASK_TO_JOIN_NAME = "div:contains('Ask to join meeting')";
 const JQ_LEAVE_CALL = "[aria-label='Leave call']";
 const DEFAULT_CLICK_TIMEOUT = 2000;
 const SELECT_COLOR = "#6200EE";
@@ -68,7 +71,7 @@ listner.onStartMeeting = response => {
   let startButton = $(JQ_START_NEW_MEETING);
   if (startButton.length > 0) {
     response("Starting session");
-    clickElement(startButton);
+    clickElement(startButton, true);
   } else {
     response("Hmmm.. call `close` to stop the current session");
   }
@@ -144,10 +147,66 @@ async function locateJoinMeeting(): Promise<number> {
 }
 
 async function locateCloseAddOther() {
-  let found = $(JQ_CLOSE_INVITE);
+  let found = $(JQ_CONTINUE_INVITE);
   if (found.length > 0) {
     clickElement(found);
+  } else {
+    found = $(JQ_CLOSE_INVITE);
+    if (found.length > 0) {
+      clickElement(found);
+    }
   }
+}
+
+async function locateMeetinJoin() {
+  // const JQ_ENTER_NAME = "[aria-label='Your name']";
+  // const JQ_ASK_TO_JOIN_NAME = "div:contains('Ask to join meeting'):parent[]";
+
+  let found = $(JQ_ENTER_NAME);
+  if (found.length > 0) {
+    console.log("Add name");
+    found.focus();
+    found.keypress();
+    found.val("Autmated meeting");
+    found.attr("aria-disabled", "false");
+    found.attr("data-initial-value", "Autmated meeting");
+    // pressButton("e");
+  }
+  found = $(JQ_ASK_TO_JOIN_NAME);
+  if (found.length > 0) {
+    console.log("Join");
+    found.closest("[role='button']").focus();
+    found.closest("[role='button']").attr("aria-disabled", "false");
+    clickElement(found.closest("[role='button']"));
+  }
+}
+
+function pressButton(k) {
+  var oEvent = document.createEvent("KeyboardEvent");
+
+  // Chromium Hack
+  Object.defineProperty(oEvent, "keyCode", {
+    get: function() {
+      return this.keyCodeVal;
+    }
+  });
+  Object.defineProperty(oEvent, "which", {
+    get: function() {
+      return this.keyCodeVal;
+    }
+  });
+
+  if (oEvent.initKeyboardEvent) {
+    oEvent.initKeyboardEvent("keydown", true, false, null, k, 1, k, false, k);
+  }
+
+  // oEvent.keyCodeVal = k;
+
+  if (oEvent.keyCode !== k) {
+    // alert("keyCode mismatch " + oEvent.keyCode + "(" + oEvent.which + ")");
+  }
+
+  document.dispatchEvent(oEvent);
 }
 
 async function locateCloseMeeting(): Promise<number> {
@@ -175,7 +234,10 @@ async function polling() {
   if (items.isEnabled) {
     if ((await locateMeeting()) == 0) {
       await locateJoinMeeting();
+      await locateMeetinJoin();
+
       await locateStartMeeting();
+
       await locateCloseMeeting();
       await locateCloseAddOther();
     }
@@ -184,8 +246,11 @@ async function polling() {
   }
 }
 
-function clickElement(found: JQuery<HTMLElement>) {
-  found.css("background-color", SELECT_COLOR);
+function clickElement(
+  found: JQuery<HTMLElement>,
+  disableColorChange: boolean = false
+) {
+  if (!disableColorChange) found.css("background-color", SELECT_COLOR);
   setTimeout(() => found.click(), DEFAULT_CLICK_TIMEOUT);
 }
 
@@ -195,7 +260,7 @@ async function storeCurrentMeeting(newMeeting: Meeting) {
   await settingsLoader.store(meetingSettings);
 }
 
-function buildMeeting(callId: string, minutes: number = 30) {
+function buildMeeting(callId: string, minutes: number = 120) {
   var meeting = new Meeting();
   meeting.beginTime = toUnixTime(addMinutes(-1));
   meeting.endTime = toUnixTime(addMinutes(minutes));
