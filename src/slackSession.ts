@@ -15,20 +15,34 @@ export class SlackSession {
   }
 
   async connect(): Promise<Boolean> {
-    var connection = await slack.rtm.connect(this._defaultToken);
-    console.log("connection", connection);
-    this.ensureHasChannel();
-    this._self = (<any>connection).self as { name: string; id: string };
-    this._webSocket = new WebSocket(connection.url);
-    this._webSocket.onmessage = event => {
-      var msg = JSON.parse(event.data) as slackMessage;
+    try {
+      var connection = await slack.rtm.connect(this._defaultToken);
+      console.log("connection", connection);
+      this.ensureHasChannel();
+      this._self = (<any>connection).self as { name: string; id: string };
+      this._webSocket = new WebSocket(connection.url);
+      this._webSocket.onmessage = event => {
+        var msg = JSON.parse(event.data) as slackMessage;
 
-      if (msg.type == "message" && this._messageCallBack != null) {
-        console.log("Recieved", msg);
-        this._messageCallBack(new IncommingMessage(msg, this));
-      }
-    };
-
+        if (msg.type == "message" && this._messageCallBack != null) {
+          console.log("Recieved", msg);
+          this._messageCallBack(new IncommingMessage(msg, this));
+        }
+      };
+      this._webSocket.onclose = () => {
+        // Try to reconnect in 5 seconds
+        console.log("Connection closed ... connecting again in 5s");
+        setTimeout(() => {
+          this.connect();
+        }, 5000);
+      };
+    } catch {
+      console.log("Connection failed ... connecting again in 5s");
+      setTimeout(() => {
+        this.connect();
+      }, 5000);
+      return false;
+    }
     return connection.ok;
   }
 
