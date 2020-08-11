@@ -1,4 +1,6 @@
-# Google Meet Autostart
+# Google Meet Autostart [UNMAINTAINED]
+
+(Meet UI is contanstanly changing making this extention extreemly hard to maintain. Unfortunately I just dont have the time to do it. I will leave the source code here if anyone is interested to take over maintanance.)
 
 [![CircleCI](https://circleci.com/gh/rolfwessels/google-meet-auto-start-extention.svg?style=svg)](https://circleci.com/gh/rolfwessels/google-meet-auto-start-extention)
 
