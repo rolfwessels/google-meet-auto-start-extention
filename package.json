@@ -15,7 +15,7 @@
     "url": "https://github.com/crolfwessels/google-meet-auto-start-extention.git"
   },
   "dependencies": {
-    "jquery": "~3.4.0",
+    "jquery": "~3.5.0",
     "slack": "^11.0.2"
   },
   "devDependencies": {
